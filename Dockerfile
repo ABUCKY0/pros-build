@@ -4,6 +4,10 @@ LABEL version="1.0" \
       description="PROS-Build Container" \
       maintainer="LemLib"
 
+LABEL org.opencontainers.image.description "PROS-Build Container"
+LABEL org.opencontainers.image.authors "LemLib"
+LABEL org.opencontainers.image.licenses "MIT"
+LABEL org.opencontainers.image.source "https://github.com/LemLib/pros-build"
 # ------------
 # Install Required Packages
 # ------------   
