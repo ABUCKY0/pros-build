@@ -28,8 +28,8 @@ jobs:
                 push: false
                 load: true
                 tags:  abucky0:action
-                cache-from: type=gha,type=local,src=/tmp/.buildx-cache
-                cache-to: type=gha,type=local,dest=/tmp/.buildx-cache
+                cache-from: type=gha
+                cache-to: type=gha,mode=max
             
           - name: Save Image
             run: docker save abucky0:action > image.tar
@@ -65,7 +65,7 @@ jobs:
             
             - name: Edit Action.yml File to point to local image
               run: |
-                cat ./action/action.yml | grep "image: \"docker://ghcr.io/abucky0/pros-build:main\""
+                cat ./action/action.yml
                 sed -i 's@image: "docker://ghcr.io/abucky0/pros-build:main"@image: "docker-archive://./image/image.tar"@g' ./action/action.yml
                 cat ./action/action.yml
             
