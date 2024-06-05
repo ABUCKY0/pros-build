@@ -87,7 +87,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
   
       - name: Pull Docker image
-        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.tag }}
+        run: docker pull ${{ needs.build.outputs.tag }}
   
       - name: Checkout
         uses: actions/checkout@v4
