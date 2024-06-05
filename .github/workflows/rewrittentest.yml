@@ -12,8 +12,6 @@ jobs:
           contents: read
           packages: write
           id-token: write
-        env:
-          REPO_LOWER: ${{ github.repository_owner }}/${{ github.repository }}
       
         steps:
           - name: Checkout repository
@@ -28,12 +26,12 @@ jobs:
             with:
                 context: .
                 push: false
-                tags:  ${{ env.REPO_LOWER }}:${{ github.sha }}
+                tags:  action:${{ github.sha }}
                 cache-from: type=gha,type=local,src=/tmp/.buildx-cache
                 cache-to: type=gha,type=local,dest=/tmp/.buildx-cache
             
           - name: Save Image
-            run: docker save ${{ env.REPO_LOWER }}:${{ github.sha }} > image.tar
+            run: docker save action:${{ github.sha }} > image.tar
 
           - name: upload-artifact
             uses: actions/upload-artifact@v4
