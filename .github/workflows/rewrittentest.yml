@@ -37,9 +37,14 @@ jobs:
           - name: upload-artifact
             uses: actions/upload-artifact@v4
             with:
-              name: image
+              name: image.tar
               path: image.tar
+              retention-days: 0.04166666666 # one hour
     
+
+
+
+
     # ----------------------------------------
     # RUN TESTS
     # ----------------------------------------
