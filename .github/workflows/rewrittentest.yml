@@ -65,7 +65,9 @@ jobs:
             
             - name: Edit Action.yml File to point to local image
               run: |
-                sed -i 's@image: "docker://ghcr.io/abucky0/pros-build:main"@image: "docker-archive://image.tar"@g' ./action/action.yml
+                cat ./action/action.yml | grep "image: \"docker://ghcr.io/abucky0/pros-build:main\""
+                sed -i 's@image: "docker://ghcr.io/abucky0/pros-build:main"@image: "docker-archive://./image/image.tar"@g' ./action/action.yml
+                cat ./action/action.yml
             
             - name: Run PROS-build
               id: test
