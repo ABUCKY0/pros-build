@@ -5,75 +5,78 @@ on:
     branches: "**"
 
 #
-
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Build and cache Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: false
-          tags: abucky0:action
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-
-  Test_LemLib:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout LemLib
-        uses: actions/checkout@v4
-        with:
-          repository: LemLib/LemLib
-          ref: stable
-      - name: Checkout Action
-        uses: actions/checkout@v4
-        with:
-          repository: abucky0/pros-build
-          ref: main
-
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Load Docker image
-        run: |
-          docker load < /tmp/.buildx-cache
-          docker tag abucky0:action abucky0:action
-
-      - name: Edit Action.yml File to point to local image
-        run: |
-          sed -i 's/docker://ghcr.io/abucky0/pros-build:main/docker://abucky0:action/g' ./action/action.yml
-          cat ./action/action.yml
-
-      - name: Run PROS-build
-        id: test
-        uses: ./action
-        with:
-          multithreading: true
-          no_commit_hash: false
+    build:
+      runs-on: ubuntu-latest
+      permissions:
+        contents: read
+        packages: write
+        id-token: write
+  
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+  
+        - name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v1
+  
+        - name: Build Docker image
+          uses: docker/build-push-action@v2
+          with:
+            context: .
+            push: false
+            tags: abucky0:action
+  
+        - name: Save Docker image
+          run: |
+            mkdir -p /tmp/docker-save
+            docker save abucky0:action > /tmp/docker-save/image.tar
+  
+        - name: Cache Docker image
+          uses: actions/cache@v2
+          with:
+            path: /tmp/docker-save
+            key: ${{ runner.os }}-buildx-${{ github.sha }}
+            restore-keys: |
+              ${{ runner.os }}-buildx-
+  
+    Test_LemLib:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout LemLib
+          uses: actions/checkout@v4
+          with:
+            repository: LemLib/LemLib
+            ref: stable
+  
+        - name: Checkout Action
+          uses: actions/checkout@v4
+          with:
+            repository: abucky0/pros-build
+            ref: main
+  
+        - name: Cache Docker image
+          uses: actions/cache@v2
+          with:
+            path: /tmp/docker-save
+            key: ${{ runner.os }}-buildx-${{ github.sha }}
+            restore-keys: |
+              ${{ runner.os }}-buildx-
+  
+        - name: Load Docker image
+          run: |
+            docker load < /tmp/docker-save/image.tar
+            docker tag abucky0:action abucky0:action
+  
+        - name: Edit Action.yml File to point to local image
+          run: |
+            sed -i 's/docker:\/\/ghcr.io\/abucky0\/pros-build:main/docker:\/\/abucky0:action/g' ./action/action.yml
+            cat ./action/action.yml
+  
+        - name: Run PROS-build
+          id: test
+          uses: ./action
+          with:
+            multithreading: true
+            no_commit_hash: false
