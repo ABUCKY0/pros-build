@@ -1,82 +1,98 @@
 name: Tests
 on:
-  push:
-  pull_request:
-    branches: "**"
+    push:
+    pull_request:
+      branches: "**"
 
-#
+
 jobs:
     build:
-      runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        packages: write
-        id-token: write
-  
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v4
-  
-        - name: Set up Docker Buildx
-          uses: docker/setup-buildx-action@v1
-  
-        - name: Build Docker image
-          uses: docker/build-push-action@v2
-          with:
-            context: .
-            push: false
-            tags: abucky0:action
-  
-        - name: Save Docker image
-          run: |
-            mkdir -p /tmp/docker-save
-            docker save abucky0:action > /tmp/docker-save/image.tar
-  
-        - name: Cache Docker image
-          uses: actions/cache@v2
-          with:
-            path: /tmp/docker-save
-            key: ${{ runner.os }}-buildx-${{ github.sha }}
-            restore-keys: |
-              ${{ runner.os }}-buildx-
-  
+        runs-on: ubuntu-latest
+        permissions:
+          contents: read
+          packages: write
+          id-token: write
+      
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v4
+
+          - name: Set up Docker Buildx
+            uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
+
+          - name: Build Image
+            id: build
+            uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09
+            with:
+                context: .
+                push: false
+                load: true
+                tags:  abucky0:action
+                cache-from: type=gha
+                cache-to: type=gha,mode=max
+            
+          - name: Save Image
+            run: docker save abucky0:action > image.tar
+
+          - name: upload-artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: image.tar
+              path: image.tar
+              retention-days: 0.04166666666 # one hour
+    
+
+
+
+
+    # ----------------------------------------
+    # RUN TESTS
+    # ----------------------------------------
     Test_LemLib:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout LemLib
-          uses: actions/checkout@v4
-          with:
-            repository: LemLib/LemLib
-            ref: stable
-  
-        - name: Checkout Action
-          uses: actions/checkout@v4
-          with:
-            repository: abucky0/pros-build
-            ref: main
-  
-        - name: Cache Docker image
-          uses: actions/cache@v2
-          with:
-            path: /tmp/docker-save
-            key: ${{ runner.os }}-buildx-${{ github.sha }}
-            restore-keys: |
-              ${{ runner.os }}-buildx-
-  
-        - name: Load Docker image
-          run: |
-            docker load < /tmp/docker-save/image.tar
-            docker tag abucky0:action abucky0:action
-  
-        - name: Edit Action.yml File to point to local image
-          run: |
-            sed -i 's/docker:\/\/ghcr.io\/abucky0\/pros-build:main/docker:\/\/abucky0:action/g' ./action/action.yml
-            cat ./action/action.yml
-  
-        - name: Run PROS-build
-          id: test
-          uses: ./action
-          with:
-            multithreading: true
-            no_commit_hash: false
+        name: "Test LemLib (And Upload Artifacts)"
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout LemLib
+              uses: actions/checkout@v4
+              with:
+                repository: LemLib/LemLib
+                ref: stable
+
+            - name: Download Image
+              uses: actions/download-artifact@v4
+              with:
+                name: image.tar
+            
+            - name: Load Image
+              run: docker load < image.tar
+
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                path: ./action/
+            
+            - name: Edit Action.yml File to point to local image
+            # image: 'docker://ghcr.io/abucky0/pros-build:main'
+            # replaced with image from Load Image Step
+              run: |
+                cat ./action/action.yml
+                sed -i 's/docker:\/\/ghcr.io\/abucky0\/pros-build:main/docker:\/\/abucky0:action/g' ./action/action.yml
+                cat ./action/action.yml
+            
+            - name: Run PROS-build
+              id: test
+              uses: ./action
+              with:
+                multithreading: true
+                no_commit_hash: false
+            
+            - name: Upload Artifact
+              id: upload
+              uses: actions/upload-artifact@v4
+              with:
+                name:  ${{ steps.test.outputs.name }}
+                path:  ${{ github.workspace }}/template/*
+            
+            - name: Add Artifact to Job Summary
+              run: 'echo "### 📦 Artifact url: ${{ steps.upload.outputs.artifact-url}}" >> $GITHUB_STEP_SUMMARY'
