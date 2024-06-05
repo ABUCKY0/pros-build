@@ -26,12 +26,12 @@ jobs:
             with:
                 context: .
                 push: false
-                tags:  action:${{ github.sha }}
+                tags:  abucky0:action
                 cache-from: type=gha,type=local,src=/tmp/.buildx-cache
                 cache-to: type=gha,type=local,dest=/tmp/.buildx-cache
             
           - name: Save Image
-            run: docker save action:${{ github.sha }} > image.tar
+            run: docker save abucky0:action > image.tar
 
           - name: upload-artifact
             uses: actions/upload-artifact@v4
