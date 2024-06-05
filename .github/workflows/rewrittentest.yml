@@ -26,6 +26,7 @@ jobs:
             with:
                 context: .
                 push: false
+                load: true
                 tags:  abucky0:action
                 cache-from: type=gha,type=local,src=/tmp/.buildx-cache
                 cache-to: type=gha,type=local,dest=/tmp/.buildx-cache
