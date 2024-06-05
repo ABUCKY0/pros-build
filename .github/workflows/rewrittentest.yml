@@ -59,11 +59,12 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event_name == 'pull_request' && 'PR-' || 'branch-' }}${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-        
+    outputs:
+      image: ${{ github.sha }}
   # ----------------------------------------
   # RUN TESTS
   # ----------------------------------------
@@ -86,7 +87,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
   
       - name: Pull Docker image
-        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event_name == 'pull_request' && 'PR-' || 'branch-' }}${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image }}
   
       - name: Checkout
         uses: actions/checkout@v4
@@ -94,19 +95,18 @@ jobs:
           path: ./action/
   
       - name: Edit Action.yml File to point to local image
-        env:
-          DOCKER_IMAGE_TAG: ${{ format('{0}/{1}:{2}{3}', env.REGISTRY, env.IMAGE_NAME, (github.event_name == 'pull_request' && 'PR-' || 'branch-'), (github.event_name == 'pull_request' && github.event.pull_request.number || github.ref)) }}
         run: |
-            cat ./action/action.yml
-            sed -i 's|docker://ghcr.io/abucky0/pros-build:main|docker://'"$DOCKER_IMAGE_TAG"'|g' ./action/action.yml
-            cat ./action/action.yml
+          cat ./action/action.yml
+          sed -i 's|docker://ghcr.io/abucky0/pros-build:main|docker://'"${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"'|g' ./action/action.yml
+          cat ./action/action.yml
+  
       - name: Run PROS-build
         id: test
         uses: ./action
         with:
           multithreading: true
           no_commit_hash: false
-  
+        
       - name: Upload Artifact
         id: upload
         uses: actions/upload-artifact@v4
